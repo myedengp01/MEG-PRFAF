@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEG-PRFAF v2026.08.22-12:00</title>
+<title>MEG-PRFAF v2026.08.22-23:30</title>
 <style>
   :root{
     --navy:#1c3d6e;
@@ -513,7 +513,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-window.VERSION_STAMP = 'MEG-PRFAF v2026.08.22-12:00';
+window.VERSION_STAMP = 'MEG-PRFAF v2026.08.22-23:30';
 document.title = window.VERSION_STAMP;
 document.getElementById('stampLogin').textContent = window.VERSION_STAMP;
 document.getElementById('stampToolbar').textContent = 'PRFAF Digital Form · ' + window.VERSION_STAMP;
@@ -889,7 +889,7 @@ function buildStatementSheetHtml(){
   <div class="sheet" style="max-width:980px;">
     <div style="text-align:right;font-size:11px;color:#999;margin-bottom:6px;">${escapeHtml(window.VERSION_STAMP)}</div>
     <div class="form-header">
-      <div class="logo-box ${logo?'':'event-badge'}">${logo?`<img src="${logo.logo}" alt="${escapeHtml(logo.name)}">`:EVENT_BADGE}</div>
+      <div class="logo-box ${logo?'':'event-badge'}">${logo?`<img src="${logo.logo}" crossorigin="anonymous" alt="${escapeHtml(logo.name)}">`:EVENT_BADGE}</div>
       <div class="title-box">
         <div class="company-name">${escapeHtml(ledger?ledger.name.toUpperCase():'')}</div>
         <div class="form-title">Statement of Account</div>
@@ -1749,19 +1749,25 @@ function buildPrfafSheetHtml(sub, items, ledgerHint){
   const actTotal = items.reduce((s,i)=>s+((i.actual_qty||0)*(i.actual_unit_price||0)),0);
   const approvedDate = sub.approved_at ? new Date(sub.approved_at).toLocaleDateString() : '';
 
+  const photoCell = url => url
+    ? `<img src="${url}" crossorigin="anonymous" style="width:44px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block;">`
+    : '<span style="color:var(--muted);">—</span>';
+
   const rowsHtml = items.map(it => `<tr>
       <td style="text-align:left;">${escapeHtml(it.item_name)}</td>
       <td class="num">${it.projected_qty||0} × RM ${fmt(it.projected_unit_price)}</td>
       <td class="num">RM ${fmt((it.projected_qty||0)*(it.projected_unit_price||0))}</td>
       <td class="num">${it.actual_qty!=null ? it.actual_qty+' × RM '+fmt(it.actual_unit_price) : '—'}</td>
       <td class="num">${it.actual_qty!=null ? 'RM '+fmt((it.actual_qty||0)*(it.actual_unit_price||0)) : '—'}</td>
+      <td style="text-align:center;">${photoCell(it.reference_image_url)}</td>
+      <td style="text-align:center;">${photoCell(it.receipt_image_url)}</td>
     </tr>`).join('');
 
   return `
   <div class="sheet" style="max-width:980px;">
     <div style="text-align:right;font-size:11px;color:#999;margin-bottom:6px;">${escapeHtml(window.VERSION_STAMP)}</div>
     <div class="form-header">
-      <div class="logo-box ${logo?'':'event-badge'}">${logo?`<img src="${logo.logo}" alt="${escapeHtml(logo.name)}">`:EVENT_BADGE}</div>
+      <div class="logo-box ${logo?'':'event-badge'}">${logo?`<img src="${logo.logo}" crossorigin="anonymous" alt="${escapeHtml(logo.name)}">`:EVENT_BADGE}</div>
       <div class="title-box">
         <div class="company-name">${escapeHtml(ledger?ledger.name.toUpperCase():'')}</div>
         <div class="form-title">Purchase Request &amp; Funding Application (PRFAF)</div>
@@ -1779,13 +1785,17 @@ function buildPrfafSheetHtml(sub, items, ledgerHint){
       </tbody>
     </table>
     <table style="margin-top:10px;">
-      <thead><tr><th>Item</th><th>Projected</th><th>Proj. Subtotal</th><th>Actual</th><th>Actual Subtotal</th></tr></thead>
+      <thead><tr><th>Item</th><th>Projected</th><th>Proj. Subtotal</th><th>Actual</th><th>Actual Subtotal</th><th>Ref Photo</th><th>Receipt</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
-      <tfoot>
-        <tr><td colspan="2" style="text-align:right;"><strong>Projected Total :</strong></td><td class="num">RM ${fmt(projTotal)}</td><td colspan="2"></td></tr>
-        <tr><td colspan="2" style="text-align:right;"><strong>Actual Total :</strong></td><td></td><td class="num">RM ${fmt(actTotal)}</td><td></td></tr>
-      </tfoot>
     </table>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <table style="width:auto;min-width:260px;">
+        <tbody>
+          <tr><td style="text-align:right;border-bottom:none;"><strong>Projected Total :</strong></td><td class="num" style="border-bottom:none;">RM ${fmt(projTotal)}</td></tr>
+          <tr><td style="text-align:right;border-bottom:none;"><strong>Actual Total :</strong></td><td class="num" style="border-bottom:none;">RM ${fmt(actTotal)}</td></tr>
+        </tbody>
+      </table>
+    </div>
     <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:13px;">
       <span>Requested: RM ${fmt(sub.requested_amount)} (${sub.requested_method||''})</span>
       <span>Status: <strong>${escapeHtml((sub.status||'draft').toUpperCase())}</strong></span>
@@ -1814,11 +1824,28 @@ async function renderOffscreenAndCapture(html){
   wrapper.innerHTML = html;
   document.body.appendChild(wrapper);
   try{
-    await new Promise(r => setTimeout(r, 60)); // let the logo image finish loading before capture
+    await waitForImagesToLoad(wrapper, 8000); // item photos and logos must actually finish loading before capture, or they render blank
     return await generatePDFBlob(wrapper.querySelector('.sheet'));
   } finally {
     wrapper.remove();
   }
+}
+
+// Waits for every <img> in the given element to finish loading (or fail)
+// before resolving, with a timeout so one broken image can't hang the PDF
+// generation forever. A failed/timed-out image is left as-is — html2canvas
+// will just render an empty box for that one image rather than blocking
+// the whole document.
+function waitForImagesToLoad(container, timeoutMs){
+  const imgs = [...container.querySelectorAll('img')];
+  if(!imgs.length) return Promise.resolve();
+  const perImage = imgs.map(img => new Promise(resolve => {
+    if(img.complete && img.naturalWidth > 0){ resolve(); return; }
+    img.addEventListener('load', resolve, { once:true });
+    img.addEventListener('error', resolve, { once:true });
+  }));
+  const timeout = new Promise(resolve => setTimeout(resolve, timeoutMs));
+  return Promise.race([Promise.all(perImage), timeout]);
 }
 
 function downloadBlob(blob, fileName){
@@ -1857,7 +1884,8 @@ function gatherLiveReqAsSub(){
     items: [...document.querySelectorAll('#reqItemsTbody tr')].map(tr => ({
       item_name: tr.querySelector('.it-name').value.trim(),
       projected_qty: parseFloat(tr.querySelector('.it-qty').value) || 0,
-      projected_unit_price: parseFloat(tr.querySelector('.it-price').value) || 0
+      projected_unit_price: parseFloat(tr.querySelector('.it-price').value) || 0,
+      reference_image_url: tr.dataset.refPhotoUrl || null
     })).filter(i => i.item_name),
     ledger
   };
