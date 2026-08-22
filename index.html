@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEG-PRFAF</title>
+<style>
+  :root{
+    --ink:#132420;
+    --paper:#f6f4ee;
+    --card:#ffffff;
+    --line:#dcd6c8;
+    --accent:#0f7a5c;
+    --accent-dark:#0b5c45;
+    --gold:#b08a2e;
+    --in:#1e7d46;
+    --out:#a13c2f;
+    --muted:#6b6f66;
+    --radius:10px;
+    --mono: 'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+    --serif: 'Georgia','Iowan Old Style',serif;
+    --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  ::selection{background:var(--gold);color:#fff;}
+
+  /* ---------- Login screen ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-card{width:380px;max-width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px 28px;box-shadow:0 20px 40px -20px rgba(19,36,32,.25);}
+  .login-brand{font-family:var(--serif);font-size:1.6rem;letter-spacing:.3px;margin:0 0 2px;color:var(--accent-dark);}
+  .login-sub{font-size:.78rem;color:var(--muted);margin:0 0 22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;font-size:.92rem;background:#fffdf9;}
+  .field input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .pw-wrap{position:relative;}
+  .pw-wrap button{position:absolute;right:6px;top:6px;background:none;border:none;cursor:pointer;font-size:1rem;padding:4px 6px;}
+  .btn{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:.88rem;font-weight:600;letter-spacing:.01em;}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .link-row{display:flex;justify-content:space-between;margin-top:14px;font-size:.78rem;}
+  .link-row a{color:var(--accent-dark);cursor:pointer;text-decoration:underline;}
+  .auth-msg{font-size:.8rem;padding:8px 10px;border-radius:6px;margin-bottom:12px;}
+  .auth-msg.err{background:#fbe7e3;color:var(--out);}
+  .auth-msg.ok{background:#e6f2ea;color:var(--accent-dark);}
+  .version-stamp{text-align:center;font-family:var(--mono);font-size:.66rem;color:var(--muted);margin-top:18px;}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .topbar{background:var(--ink);color:#f2efe6;display:flex;align-items:center;gap:14px;padding:10px 18px;flex-wrap:wrap;}
+  .topbar .brand{font-family:var(--serif);font-size:1.15rem;margin-right:8px;}
+  .topbar .stamp{font-family:var(--mono);font-size:.62rem;opacity:.55;margin-right:auto;}
+  .topbar button{background:transparent;border:1px solid rgba(242,239,230,.3);color:#f2efe6;border-radius:6px;padding:7px 12px;font-size:.8rem;cursor:pointer;}
+  .topbar button:hover{background:rgba(242,239,230,.12);}
+  .topbar button.active{background:var(--accent);border-color:var(--accent);}
+  .topbar button[hidden]{display:none;}
+
+  .content{padding:22px;max-width:1200px;margin:0 auto;}
+  .section-title{font-family:var(--serif);font-size:1.3rem;margin:0 0 4px;color:var(--accent-dark);}
+  .section-sub{font-size:.82rem;color:var(--muted);margin:0 0 18px;}
+
+  /* ---------- Cards / tables ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:760px){.grid3{grid-template-columns:1fr;}}
+  .balance-card{background:linear-gradient(180deg,#fff,#fbfaf5);border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+  .balance-card .label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .balance-card .amt{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent-dark);margin-top:4px;}
+  .balance-card.total .amt{color:var(--ink);font-size:1.7rem;}
+
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line);padding:8px 8px;}
+  td{padding:9px 8px;border-bottom:1px solid #ece7d9;vertical-align:top;}
+  tr:hover td{background:#fbfaf3;}
+  .num{font-family:var(--mono);text-align:right;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .pill-draft{background:#eee;color:#666;}
+  .pill-submitted{background:#fdf0d5;color:#8a5a00;}
+  .pill-approved{background:#e1f0e6;color:var(--in);}
+  .pill-disapproved{background:#fbe7e3;color:var(--out);}
+  .pill-disbursed{background:#dcecf7;color:#1b5f8a;}
+  .pill-completed{background:#e6f2ea;color:var(--accent-dark);}
+  .in{color:var(--in);}
+  .out{color:var(--out);}
+
+  .toolbar-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .btn-sm{border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 12px;font-size:.8rem;cursor:pointer;}
+  .btn-sm:hover{border-color:var(--accent);color:var(--accent-dark);}
+  .btn-accent{background:var(--accent);color:#fff;border:none;}
+  .btn-accent:hover{background:var(--accent-dark);}
+  .btn-danger{background:var(--out);color:#fff;border:none;}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+  .tab{padding:8px 14px;border-radius:20px;border:1px solid var(--line);background:#fff;font-size:.8rem;cursor:pointer;}
+  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .items-table input{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:5px;font-size:.82rem;}
+  .subtotal{font-family:var(--mono);font-weight:700;}
+  .thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
+  .thumb-btn{font-size:.72rem;}
+
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(19,36,32,.45);align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff;border-radius:var(--radius);max-width:720px;width:100%;max-height:88vh;overflow:auto;padding:24px;}
+  .modal h3{font-family:var(--serif);margin-top:0;}
+  .close-x{float:right;cursor:pointer;font-size:1.2rem;background:none;border:none;}
+
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:.85rem;}
+  select, textarea{padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:.85rem;font-family:inherit;width:100%;}
+  label.f{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 4px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <p class="login-brand">MEG-PRFAF</p>
+    <p class="login-sub">Purchase Request &amp; Funding Application</p>
+    <div id="authMsg"></div>
+
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div>
+      <div class="field"><label>Password</label>
+        <div class="pw-wrap">
+          <input id="loginPw" type="password" autocomplete="current-password">
+          <button type="button" onclick="togglePwVisibility('loginPw',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Log In</button>
+      <div class="link-row">
+        <a onclick="showSignup()">Create account</a>
+        <a onclick="showForgot()">Forgot password?</a>
+      </div>
+    </div>
+
+    <div id="signupForm" style="display:none;">
+      <div class="field"><label>Full Name</label><input id="signupName" type="text"></div>
+      <div class="field"><label>Email</label><input id="signupEmail" type="email" autocomplete="username"></div>
+      <div class="field"><label>Password</label>
+        <div class="pw-wrap">
+          <input id="signupPw" type="password" autocomplete="new-password">
+          <button type="button" onclick="togglePwVisibility('signupPw',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doSignUp()">Sign Up</button>
+      <div class="link-row"><a onclick="showLogin()">Back to log in</a><span></span></div>
+    </div>
+
+    <div id="forgotForm" style="display:none;">
+      <div class="field"><label>Email</label><input id="forgotEmail" type="email"></div>
+      <button class="btn btn-primary" onclick="doForgotPassword()">Send reset link</button>
+      <div class="link-row"><a onclick="showLogin()">Back to log in</a><span></span></div>
+    </div>
+
+    <p class="version-stamp" id="stampLogin"></p>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="app">
+  <div class="topbar">
+    <span class="brand">MEG-PRFAF</span>
+    <span class="stamp" id="stampToolbar"></span>
+    <button id="navRequests" class="active" onclick="switchView('requests')">🧾 Purchase Requests</button>
+    <button id="navLedger" onclick="switchView('ledger')">💰 Account Ledger</button>
+    <button id="navAdmin" hidden onclick="switchView('admin')">📋 Admin</button>
+    <button onclick="doLogout()">Log Out</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ============ PURCHASE REQUESTS VIEW ============ -->
+    <div id="viewRequests">
+      <p class="section-title">Purchase Requests</p>
+      <p class="section-sub">Submit a request, track approval, confirm disbursement, and reconcile actual spend.</p>
+
+      <div class="toolbar-row">
+        <button class="btn-sm btn-accent" onclick="openNewRequest()">+ New Request</button>
+        <button class="btn-sm" onclick="loadMyRequests()">↻ Refresh</button>
+      </div>
+
+      <div class="tabs" id="requestTabs">
+        <div class="tab active" data-scope="mine" onclick="setRequestScope('mine')">My Requests</div>
+        <div class="tab" data-scope="approve" id="tabApprove" hidden onclick="setRequestScope('approve')">Pending My Approval</div>
+        <div class="tab" data-scope="all" id="tabAll" hidden onclick="setRequestScope('all')">All (Admin)</div>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th>Serial</th><th>Ledger</th><th>Purpose</th><th>Requested</th><th>Status</th><th>Submitted</th><th></th>
+          </tr></thead>
+          <tbody id="requestsTbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ ACCOUNT LEDGER VIEW ============ -->
+    <div id="viewLedger" style="display:none;">
+      <p class="section-title">Account Ledger</p>
+      <p class="section-sub">Live cash / online / card balances per entity, derived from every fund-in and purchase-out transaction.</p>
+
+      <div class="tabs" id="ledgerTabs"></div>
+
+      <div class="grid3" id="ledgerBalanceCards"></div>
+
+      <div class="card" style="margin-top:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <strong style="font-size:.85rem;">Transaction History</strong>
+          <button class="btn-sm" onclick="exportLedgerCsv()">⬇ Export CSV</button>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Dept</th><th>Remarks</th><th class="num">Amount</th></tr></thead>
+          <tbody id="ledgerTxnTbody"><tr><td colspan="6" class="empty">Select a ledger above.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <strong style="font-size:.85rem;">Request a New Special-Occasion Ledger</strong>
+        <p class="section-sub" style="margin-top:4px;">e.g. Graduation Ceremony, Annual Dinner — starts pending until an admin approves it.</p>
+        <div style="display:flex;gap:8px;">
+          <input id="newLedgerName" placeholder="Ledger name, e.g. Graduation Ceremony 2027" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:6px;">
+          <button class="btn-sm btn-accent" onclick="requestNewLedger()">Request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ADMIN VIEW ============ -->
+    <div id="viewAdmin" style="display:none;">
+      <p class="section-title">Admin — Ledgers Overview</p>
+      <p class="section-sub">All entities at a glance, plus pending special-occasion ledgers awaiting approval.</p>
+
+      <div class="card">
+        <strong style="font-size:.85rem;">Pending Ledger Approvals</strong>
+        <table style="margin-top:8px;">
+          <thead><tr><th>Name</th><th>Requested By</th><th>Requested</th><th></th></tr></thead>
+          <tbody id="pendingLedgersTbody"><tr><td colspan="4" class="empty">None pending.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <strong style="font-size:.85rem;">All Ledger Balances</strong>
+        <table style="margin-top:8px;">
+          <thead><tr><th>Entity</th><th class="num">Cash</th><th class="num">Online</th><th class="num">Card</th><th class="num">Total</th></tr></thead>
+          <tbody id="allBalancesTbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- New / edit request modal -->
+<div class="modal-bg" id="reqModalBg">
+  <div class="modal">
+    <button class="close-x" onclick="closeModal('reqModalBg')">✕</button>
+    <h3 id="reqModalTitle">New Purchase Request</h3>
+
+    <label class="f">Ledger / Entity</label>
+    <select id="reqLedger"></select>
+
+    <label class="f">Department (optional)</label>
+    <input id="reqDept" placeholder="e.g. E1, E3, HQ">
+
+    <label class="f">Purpose</label>
+    <textarea id="reqPurpose" rows="2" placeholder="What is this purchase for?"></textarea>
+
+    <label class="f">Items</label>
+    <table class="items-table">
+      <thead><tr><th>Item</th><th style="width:70px;">Qty</th><th style="width:100px;">Unit Price (RM)</th><th style="width:90px;">Subtotal</th><th style="width:70px;">Photo</th><th></th></tr></thead>
+      <tbody id="reqItemsTbody"></tbody>
+    </table>
+    <button class="btn-sm" style="margin-top:8px;" onclick="addItemRow()">+ Add Item</button>
+
+    <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:.9rem;">
+      <strong>Projected Total</strong>
+      <strong class="subtotal" id="reqProjectedTotal">RM 0.00</strong>
+    </div>
+
+    <label class="f">Requested Fund Amount (RM)</label>
+    <input id="reqAmount" type="number" step="0.01">
+    <label class="f">Preferred Method</label>
+    <select id="reqMethod"><option value="cash">Cash</option><option value="online">Online</option><option value="card">Card</option></select>
+
+    <div class="toolbar-row" style="margin-top:16px;">
+      <button class="btn-sm" onclick="saveDraftRequest()">💾 Save Draft</button>
+      <button class="btn-sm btn-accent" onclick="submitRequest()">✅ Submit for Approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review / approve / disburse / reconcile modal -->
+<div class="modal-bg" id="reviewModalBg">
+  <div class="modal">
+    <button class="close-x" onclick="closeModal('reviewModalBg')">✕</button>
+    <div id="reviewModalBody"></div>
+  </div>
+</div>
+
+<script>
+// Runs immediately, independent of the module script below, so the
+// version stamp always renders even if the Supabase import is slow
+// or fails to resolve (module scripts halt entirely on a failed import).
+window.VERSION_STAMP = 'MEG-PRFAF v2026.08.22-09:00';
+document.title = window.VERSION_STAMP;
+document.getElementById('stampLogin').textContent = window.VERSION_STAMP;
+document.getElementById('stampToolbar').textContent = window.VERSION_STAMP;
+</script>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ---------------------------------------------------------------------
+// CONFIG
+// ---------------------------------------------------------------------
+const SUPABASE_URL = 'https://vzngfswtofegimfcoigx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6bmdmc3d0b2ZlZ2ltZmNvaWd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyODA5MzUsImV4cCI6MjEwMDg1NjkzNX0.47rTrOjzNgxarCBYGapqajLw5v_yATbeKitiyP6a2Sg';
+const VERSION_STAMP = window.VERSION_STAMP;
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.sb = sb;
+
+let currentUser = null;
+let currentPerm = { can_submit:false, can_approve:false, is_admin:false };
+let ledgerAccounts = [];         // active ledgers
+let pendingLedgerAccounts = [];  // pending, admin only
+let currentLedgerId = null;
+let itemRowSeq = 0;
+let editingSubmissionId = null;  // when editing a draft
+
+// ---------------------------------------------------------------------
+// AUTH UI
+// ---------------------------------------------------------------------
+window.togglePwVisibility = function(fieldId, btn){
+  const el = document.getElementById(fieldId);
+  if(el.type === 'password'){ el.type='text'; btn.textContent='🙈'; }
+  else { el.type='password'; btn.textContent='👁'; }
+};
+
+window.showLogin = () => { hideAllAuth(); document.getElementById('loginForm').style.display='block'; };
+window.showSignup = () => { hideAllAuth(); document.getElementById('signupForm').style.display='block'; };
+window.showForgot = () => { hideAllAuth(); document.getElementById('forgotForm').style.display='block'; };
+function hideAllAuth(){
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('signupForm').style.display='none';
+  document.getElementById('forgotForm').style.display='none';
+  document.getElementById('authMsg').innerHTML='';
+}
+function authMsg(text, ok){
+  const el = document.getElementById('authMsg');
+  el.innerHTML = `<div class="auth-msg ${ok?'ok':'err'}">${text}</div>`;
+}
+
+window.doLogin = async function(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPw').value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ authMsg(error.message, false); return; }
+  await bootApp();
+};
+
+window.doSignUp = async function(){
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPw').value;
+  const full_name = document.getElementById('signupName').value.trim();
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: {
+      data: { full_name },
+      emailRedirectTo: window.location.origin + window.location.pathname
+    }
+  });
+  if(error){ authMsg(error.message, false); return; }
+  if(!data.session){
+    authMsg('Check your email to confirm your account before logging in.', true);
+    return;
+  }
+  await bootApp();
+};
+
+window.doForgotPassword = async function(){
+  const email = document.getElementById('forgotEmail').value.trim();
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){ authMsg(error.message, false); return; }
+  authMsg('Password reset link sent — check your email.', true);
+};
+
+window.doLogout = async function(){
+  await sb.auth.signOut();
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+};
+
+// ---------------------------------------------------------------------
+// BOOT
+// ---------------------------------------------------------------------
+async function bootApp(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  currentUser = user;
+
+  const { data: perm } = await sb
+    .from('form_permissions')
+    .select('can_submit,can_approve,is_admin')
+    .eq('user_id', user.id)
+    .eq('form_code', 'prfaf')
+    .maybeSingle();
+  currentPerm = perm || { can_submit:true, can_approve:false, is_admin:false };
+
+  document.getElementById('tabApprove').hidden = !currentPerm.can_approve && !currentPerm.is_admin;
+  document.getElementById('tabAll').hidden = !currentPerm.is_admin;
+  document.getElementById('navAdmin').hidden = !currentPerm.is_admin;
+
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+
+  await loadLedgerAccounts();
+  await loadMyRequests();
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if(event === 'SIGNED_IN' && !currentUser) bootApp();
+});
+(async () => { const { data: { session } } = await sb.auth.getSession(); if(session) bootApp(); })();
+
+// ---------------------------------------------------------------------
+// NAV
+// ---------------------------------------------------------------------
+window.switchView = function(view){
+  document.getElementById('viewRequests').style.display = view==='requests' ? 'block':'none';
+  document.getElementById('viewLedger').style.display = view==='ledger' ? 'block':'none';
+  document.getElementById('viewAdmin').style.display = view==='admin' ? 'block':'none';
+  document.getElementById('navRequests').classList.toggle('active', view==='requests');
+  document.getElementById('navLedger').classList.toggle('active', view==='ledger');
+  document.getElementById('navAdmin').classList.toggle('active', view==='admin');
+  if(view==='ledger') loadLedgerView();
+  if(view==='admin') loadAdminView();
+};
+
+// ---------------------------------------------------------------------
+// LEDGER ACCOUNTS
+// ---------------------------------------------------------------------
+async function loadLedgerAccounts(){
+  const { data } = await sb.from('ledger_accounts').select('*').order('type').order('name');
+  ledgerAccounts = (data||[]).filter(l => l.status === 'active');
+  pendingLedgerAccounts = (data||[]).filter(l => l.status === 'pending');
+
+  const sel = document.getElementById('reqLedger');
+  sel.innerHTML = ledgerAccounts.map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('');
+
+  const tabs = document.getElementById('ledgerTabs');
+  tabs.innerHTML = ledgerAccounts.map((l,i) =>
+    `<div class="tab ${i===0?'active':''}" data-id="${l.id}" onclick="selectLedgerTab('${l.id}')">${l.type==='event'?'🎉 ':'🏢 '}${escapeHtml(l.name)}</div>`
+  ).join('');
+  if(ledgerAccounts.length) currentLedgerId = ledgerAccounts[0].id;
+}
+
+window.selectLedgerTab = function(id){
+  currentLedgerId = id;
+  document.querySelectorAll('#ledgerTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.id === id));
+  loadLedgerBalances(id);
+  loadLedgerTransactions(id);
+};
+
+async function loadLedgerView(){
+  if(!currentLedgerId && ledgerAccounts.length) currentLedgerId = ledgerAccounts[0].id;
+  if(currentLedgerId){
+    loadLedgerBalances(currentLedgerId);
+    loadLedgerTransactions(currentLedgerId);
+  }
+}
+
+async function loadLedgerBalances(id){
+  const { data } = await sb.from('ledger_totals').select('*').eq('ledger_account_id', id).maybeSingle();
+  const cash = data?.cash_balance || 0, online = data?.online_balance || 0, card = data?.card_balance || 0;
+  const total = data?.total_balance || 0;
+  document.getElementById('ledgerBalanceCards').innerHTML = `
+    <div class="balance-card"><div class="label">Cash</div><div class="amt">RM ${fmt(cash)}</div></div>
+    <div class="balance-card"><div class="label">Online</div><div class="amt">RM ${fmt(online)}</div></div>
+    <div class="balance-card"><div class="label">Card</div><div class="amt">RM ${fmt(card)}</div></div>
+    <div class="balance-card total" style="grid-column:1/-1;"><div class="label">Total Balance</div><div class="amt">RM ${fmt(total)}</div></div>
+  `;
+}
+
+async function loadLedgerTransactions(id){
+  const { data } = await sb.from('ledger_transactions').select('*').eq('ledger_account_id', id).order('created_at', { ascending:false }).limit(200);
+  const tbody = document.getElementById('ledgerTxnTbody');
+  if(!data || !data.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty">No transactions yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(t => {
+    const isIn = ['fund_in','transfer_in','refund'].includes(t.type);
+    return `<tr>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+      <td>${labelType(t.type)}</td>
+      <td style="text-transform:capitalize;">${t.method}</td>
+      <td>${escapeHtml(t.department_tag||'—')}</td>
+      <td>${escapeHtml(t.remarks||'')}</td>
+      <td class="num ${isIn?'in':'out'}">${isIn?'+':'-'}RM ${fmt(t.amount)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function labelType(t){
+  return { fund_in:'Fund In', purchase_out:'Purchase', transfer_in:'Transfer In', transfer_out:'Transfer Out', refund:'Refund', adjustment:'Adjustment' }[t] || t;
+}
+
+window.exportLedgerCsv = async function(){
+  const { data } = await sb.from('ledger_transactions').select('*').eq('ledger_account_id', currentLedgerId).order('created_at');
+  if(!data || !data.length){ alert('No transactions to export.'); return; }
+  const rows = [['Date','Type','Method','Department','Remarks','Amount']];
+  data.forEach(t => rows.push([new Date(t.created_at).toLocaleString(), labelType(t.type), t.method, t.department_tag||'', t.remarks||'', t.amount]));
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ledger_${currentLedgerId}.csv`;
+  a.click();
+};
+
+window.requestNewLedger = async function(){
+  const name = document.getElementById('newLedgerName').value.trim();
+  if(!name){ alert('Enter a ledger name.'); return; }
+  const code = 'EVT-' + name.toUpperCase().replace(/[^A-Z0-9]+/g,'-').slice(0,24) + '-' + Date.now().toString(36).slice(-4);
+  const { error } = await sb.from('ledger_accounts').insert({
+    code, name, type:'event', status:'pending',
+    requested_by: currentUser.id,
+    requested_by_name: currentUser.user_metadata?.full_name || currentUser.email
+  });
+  if(error){ alert('Could not submit request: ' + error.message); return; }
+  document.getElementById('newLedgerName').value = '';
+  alert('Ledger request submitted — pending admin approval.');
+  await loadLedgerAccounts();
+};
+
+// ---------------------------------------------------------------------
+// ADMIN VIEW
+// ---------------------------------------------------------------------
+async function loadAdminView(){
+  const { data: pending } = await sb.from('ledger_accounts').select('*').eq('status','pending').order('created_at');
+  const ptb = document.getElementById('pendingLedgersTbody');
+  if(!pending || !pending.length){ ptb.innerHTML = '<tr><td colspan="4" class="empty">None pending.</td></tr>'; }
+  else {
+    ptb.innerHTML = pending.map(l => `<tr>
+      <td>${escapeHtml(l.name)}</td>
+      <td>${escapeHtml(l.requested_by_name||'—')}</td>
+      <td>${new Date(l.created_at).toLocaleDateString()}</td>
+      <td><button class="btn-sm btn-accent" onclick="approveLedger('${l.id}')">Approve</button></td>
+    </tr>`).join('');
+  }
+
+  const { data: totals } = await sb.from('ledger_totals').select('*');
+  const btb = document.getElementById('allBalancesTbody');
+  if(!totals || !totals.length){ btb.innerHTML = '<tr><td colspan="5" class="empty">No ledgers yet.</td></tr>'; }
+  else {
+    btb.innerHTML = totals.map(t => `<tr>
+      <td>${escapeHtml(t.name)}</td>
+      <td class="num">RM ${fmt(t.cash_balance)}</td>
+      <td class="num">RM ${fmt(t.online_balance)}</td>
+      <td class="num">RM ${fmt(t.card_balance)}</td>
+      <td class="num subtotal">RM ${fmt(t.total_balance)}</td>
+    </tr>`).join('');
+  }
+}
+
+window.approveLedger = async function(id){
+  const { error } = await sb.from('ledger_accounts').update({
+    status:'active', approved_by: currentUser.id,
+    approved_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    approved_at: new Date().toISOString()
+  }).eq('id', id);
+  if(error){ alert(error.message); return; }
+  await loadAdminView();
+  await loadLedgerAccounts();
+};
+
+// ---------------------------------------------------------------------
+// PURCHASE REQUESTS — list
+// ---------------------------------------------------------------------
+let requestScope = 'mine';
+window.setRequestScope = function(scope){
+  requestScope = scope;
+  document.querySelectorAll('#requestTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.scope===scope));
+  loadMyRequests();
+};
+
+window.loadMyRequests = async function(){
+  let query = sb.from('prfaf_submissions').select('*, ledger_accounts(name)').is('deleted_at', null).order('created_at', {ascending:false});
+  if(requestScope === 'mine') query = query.eq('submitted_by', currentUser.id);
+  else if(requestScope === 'approve') query = query.eq('status','submitted');
+  // 'all' — no extra filter, relies on RLS for admin visibility
+
+  const { data, error } = await query;
+  const tbody = document.getElementById('requestsTbody');
+  if(error){ tbody.innerHTML = `<tr><td colspan="7" class="empty">${error.message}</td></tr>`; return; }
+  if(!data || !data.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty">No requests yet.</td></tr>'; return; }
+
+  tbody.innerHTML = data.map(r => `<tr>
+    <td>${escapeHtml(r.serial_no||'draft')}</td>
+    <td>${escapeHtml(r.ledger_accounts?.name||'—')}</td>
+    <td>${escapeHtml((r.purpose||'').slice(0,40))}</td>
+    <td class="num">RM ${fmt(r.requested_amount||0)}</td>
+    <td><span class="pill pill-${r.status}">${r.status}</span></td>
+    <td>${r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '—'}</td>
+    <td><button class="btn-sm" onclick="openReview('${r.id}')">${r.status==='draft'?'Edit':'View'}</button></td>
+  </tr>`).join('');
+};
+
+// ---------------------------------------------------------------------
+// NEW / EDIT REQUEST MODAL
+// ---------------------------------------------------------------------
+window.openNewRequest = function(){
+  editingSubmissionId = null;
+  document.getElementById('reqModalTitle').textContent = 'New Purchase Request';
+  document.getElementById('reqDept').value = '';
+  document.getElementById('reqPurpose').value = '';
+  document.getElementById('reqAmount').value = '';
+  document.getElementById('reqItemsTbody').innerHTML = '';
+  addItemRow();
+  document.getElementById('reqModalBg').classList.add('show');
+};
+window.closeModal = (id) => document.getElementById(id).classList.remove('show');
+
+window.addItemRow = function(prefill){
+  const id = 'row' + (itemRowSeq++);
+  const tbody = document.getElementById('reqItemsTbody');
+  const tr = document.createElement('tr');
+  tr.id = id;
+  tr.innerHTML = `
+    <td><input class="it-name" value="${prefill?escapeHtmlAttr(prefill.item_name):''}"></td>
+    <td><input class="it-qty" type="number" step="0.01" value="${prefill?prefill.projected_qty:1}" oninput="recalcRow('${id}')"></td>
+    <td><input class="it-price" type="number" step="0.01" value="${prefill?prefill.projected_unit_price:''}" oninput="recalcRow('${id}')"></td>
+    <td class="num subtotal it-subtotal">RM 0.00</td>
+    <td><input class="it-photo" type="file" accept="image/*" class="thumb-btn"></td>
+    <td><button class="btn-sm" onclick="document.getElementById('${id}').remove(); recalcTotal();">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  recalcRow(id);
+};
+
+window.recalcRow = function(id){
+  const tr = document.getElementById(id);
+  const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
+  const price = parseFloat(tr.querySelector('.it-price').value) || 0;
+  tr.querySelector('.it-subtotal').textContent = 'RM ' + fmt(qty*price);
+  recalcTotal();
+};
+
+function recalcTotal(){
+  let total = 0;
+  document.querySelectorAll('#reqItemsTbody tr').forEach(tr => {
+    const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.it-price').value) || 0;
+    total += qty*price;
+  });
+  document.getElementById('reqProjectedTotal').textContent = 'RM ' + fmt(total);
+  if(!document.getElementById('reqAmount').dataset.userEdited){
+    document.getElementById('reqAmount').value = total.toFixed(2);
+  }
+}
+document.getElementById('reqAmount').addEventListener('input', function(){ this.dataset.userEdited = '1'; });
+
+async function uploadAttachment(file){
+  if(!file) return null;
+  const path = `${currentUser.id}/${Date.now()}_${file.name}`;
+  const { error } = await sb.storage.from('prfaf-attachments').upload(path, file);
+  if(error){ console.error(error); return null; }
+  const { data } = sb.storage.from('prfaf-attachments').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function collectItems(){
+  const rows = [...document.querySelectorAll('#reqItemsTbody tr')];
+  const items = [];
+  for(const tr of rows){
+    const item_name = tr.querySelector('.it-name').value.trim();
+    if(!item_name) continue;
+    const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.it-price').value) || 0;
+    const file = tr.querySelector('.it-photo').files[0];
+    const reference_image_url = file ? await uploadAttachment(file) : null;
+    items.push({ item_name, projected_qty: qty, projected_unit_price: price, reference_image_url });
+  }
+  return items;
+}
+
+function updateSerial(ledgerCode){
+  const now = new Date();
+  const ym = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const rand = Math.random().toString(36).slice(2,6).toUpperCase();
+  return `${ledgerCode}-PRFAF-${ym}-${rand}`;
+}
+
+async function saveSubmission(status){
+  const ledger_account_id = document.getElementById('reqLedger').value;
+  const ledger = ledgerAccounts.find(l => l.id === ledger_account_id);
+  const department_tag = document.getElementById('reqDept').value.trim() || null;
+  const purpose = document.getElementById('reqPurpose').value.trim();
+  const requested_amount = parseFloat(document.getElementById('reqAmount').value) || 0;
+  const requested_method = document.getElementById('reqMethod').value;
+
+  const payload = {
+    submitted_by: currentUser.id,
+    submitted_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    ledger_account_id, department_tag, purpose,
+    requested_amount, requested_method,
+    status
+  };
+  if(status === 'submitted'){
+    payload.submitted_at = new Date().toISOString();
+    payload.serial_no = updateSerial(ledger ? ledger.code : 'GEN');
+  }
+
+  let submissionId = editingSubmissionId;
+  if(submissionId){
+    const { error } = await sb.from('prfaf_submissions').update(payload).eq('id', submissionId);
+    if(error){ alert(error.message); return null; }
+  } else {
+    const { data, error } = await sb.from('prfaf_submissions').insert(payload).select().single();
+    if(error){ alert(error.message); return null; }
+    submissionId = data.id;
+  }
+
+  const items = await collectItems();
+  await sb.from('prfaf_items').delete().eq('submission_id', submissionId);
+  if(items.length){
+    await sb.from('prfaf_items').insert(items.map((it,i) => ({...it, submission_id: submissionId, sort_order:i})));
+  }
+  return submissionId;
+}
+
+window.saveDraftRequest = async function(){
+  const id = await saveSubmission('draft');
+  if(id){ closeModal('reqModalBg'); loadMyRequests(); }
+};
+
+window.submitRequest = async function(){
+  const amt = parseFloat(document.getElementById('reqAmount').value);
+  if(!amt || amt <= 0){ alert('Enter a requested fund amount.'); return; }
+  const id = await saveSubmission('submitted');
+  if(id){ closeModal('reqModalBg'); loadMyRequests(); alert('Submitted for approval.'); }
+};
+
+// ---------------------------------------------------------------------
+// REVIEW / APPROVE / DISBURSE / RECONCILE MODAL
+// ---------------------------------------------------------------------
+window.openReview = async function(id){
+  if(true){
+    const { data: sub } = await sb.from('prfaf_submissions').select('*, ledger_accounts(name,code)').eq('id', id).single();
+    if(sub.status === 'draft' && sub.submitted_by === currentUser.id){
+      editingSubmissionId = id;
+      document.getElementById('reqModalTitle').textContent = 'Edit Draft Request';
+      document.getElementById('reqLedger').value = sub.ledger_account_id;
+      document.getElementById('reqDept').value = sub.department_tag || '';
+      document.getElementById('reqPurpose').value = sub.purpose || '';
+      document.getElementById('reqAmount').value = sub.requested_amount || '';
+      document.getElementById('reqMethod').value = sub.requested_method || 'cash';
+      const { data: items } = await sb.from('prfaf_items').select('*').eq('submission_id', id).order('sort_order');
+      document.getElementById('reqItemsTbody').innerHTML = '';
+      (items||[]).forEach(it => addItemRow(it));
+      if(!items || !items.length) addItemRow();
+      document.getElementById('reqModalBg').classList.add('show');
+      return;
+    }
+  }
+
+  const { data: sub } = await sb.from('prfaf_submissions').select('*, ledger_accounts(name,code)').eq('id', id).single();
+  const { data: items } = await sb.from('prfaf_items').select('*').eq('submission_id', id).order('sort_order');
+  renderReview(sub, items||[]);
+  document.getElementById('reviewModalBg').classList.add('show');
+};
+
+function renderReview(sub, items){
+  const projTotal = items.reduce((s,i)=>s+(i.projected_subtotal||0),0);
+  const actTotal = items.reduce((s,i)=>s+(i.actual_subtotal||0),0);
+  const isApprover = currentPerm.can_approve || currentPerm.is_admin;
+  const isOwner = sub.submitted_by === currentUser.id;
+
+  let itemsHtml = items.map(it => `<tr>
+    <td>${escapeHtml(it.item_name)}</td>
+    <td class="num">${it.projected_qty} × RM ${fmt(it.projected_unit_price)}</td>
+    <td class="num">RM ${fmt(it.projected_subtotal)}</td>
+    <td class="num">${it.actual_qty!=null ? it.actual_qty+' × RM '+fmt(it.actual_unit_price) : '—'}</td>
+    <td class="num">${it.actual_subtotal!=null ? 'RM '+fmt(it.actual_subtotal) : '—'}</td>
+    <td>${it.reference_image_url ? `<a href="${it.reference_image_url}" target="_blank"><img class="thumb" src="${it.reference_image_url}"></a>` : '—'}</td>
+    <td>${it.receipt_image_url ? `<a href="${it.receipt_image_url}" target="_blank"><img class="thumb" src="${it.receipt_image_url}"></a>` : '—'}</td>
+  </tr>`).join('');
+
+  let actionsHtml = '';
+
+  if(sub.status === 'submitted' && isApprover){
+    actionsHtml = `
+      <div class="toolbar-row">
+        <button class="btn-sm btn-accent" onclick="approveSubmission('${sub.id}')">Approve</button>
+        <button class="btn-sm btn-danger" onclick="showDisapproveBox('${sub.id}')">Disapprove</button>
+      </div>
+      <div id="disapproveBox" style="display:none;">
+        <textarea id="disapproveReason" rows="2" placeholder="Reason for disapproval"></textarea>
+        <button class="btn-sm btn-danger" style="margin-top:6px;" onclick="disapproveSubmission('${sub.id}')">Confirm Disapproval</button>
+      </div>`;
+  }
+
+  if(sub.status === 'approved' && isApprover){
+    actionsHtml = `
+      <p class="section-sub">Confirm the funds have actually been released before posting them to the ledger.</p>
+      <label class="f">Disbursed Amount (RM)</label>
+      <input id="disburseAmount" type="number" step="0.01" value="${sub.requested_amount||''}">
+      <label class="f">Method</label>
+      <select id="disburseMethod">
+        <option value="cash" ${sub.requested_method==='cash'?'selected':''}>Cash</option>
+        <option value="online" ${sub.requested_method==='online'?'selected':''}>Online</option>
+        <option value="card" ${sub.requested_method==='card'?'selected':''}>Card</option>
+      </select>
+      <label class="f">Reference (bank/eWallet ref no, optional)</label>
+      <input id="disburseRef">
+      <div class="toolbar-row" style="margin-top:10px;">
+        <button class="btn-sm btn-accent" onclick="confirmDisbursement('${sub.id}')">Confirm Disbursement</button>
+      </div>`;
+  }
+
+  if(sub.status === 'disbursed' && isOwner){
+    actionsHtml = `
+      <p class="section-sub">Enter actual prices and upload receipt photos for each item, then mark complete.</p>
+      <div id="reconcileRows">${items.map(it => `
+        <div class="card" style="padding:10px;">
+          <strong>${escapeHtml(it.item_name)}</strong>
+          <label class="f">Actual Qty</label><input class="rc-qty" type="number" step="0.01" data-id="${it.id}" value="${it.actual_qty ?? it.projected_qty ?? 1}">
+          <label class="f">Actual Unit Price (RM)</label><input class="rc-price" type="number" step="0.01" data-id="${it.id}" value="${it.actual_unit_price ?? it.projected_unit_price ?? ''}">
+          <label class="f">Receipt Photo</label><input class="rc-photo" type="file" accept="image/*" data-id="${it.id}">
+        </div>`).join('')}
+      </div>
+      <div class="toolbar-row" style="margin-top:10px;">
+        <button class="btn-sm btn-accent" onclick="completeReconciliation('${sub.id}')">Save &amp; Mark Completed</button>
+      </div>`;
+  }
+
+  document.getElementById('reviewModalBody').innerHTML = `
+    <h3>${escapeHtml(sub.serial_no||'Draft')} <span class="pill pill-${sub.status}">${sub.status}</span></h3>
+    <p class="section-sub">${escapeHtml(sub.ledger_accounts?.name||'')} ${sub.department_tag?'· '+escapeHtml(sub.department_tag):''}</p>
+    <p>${escapeHtml(sub.purpose||'')}</p>
+    <table>
+      <thead><tr><th>Item</th><th>Projected</th><th>Proj. Subtotal</th><th>Actual</th><th>Actual Subtotal</th><th>Ref Photo</th><th>Receipt</th></tr></thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:.9rem;">
+      <span>Projected Total: <strong>RM ${fmt(projTotal)}</strong></span>
+      <span>Actual Total: <strong>RM ${fmt(actTotal)}</strong></span>
+    </div>
+    <p>Requested: RM ${fmt(sub.requested_amount)} (${sub.requested_method})</p>
+    ${sub.disbursed_amount ? `<p>Disbursed: RM ${fmt(sub.disbursed_amount)} (${sub.disbursed_method}) by ${escapeHtml(sub.disbursed_by_name||'')}</p>` : ''}
+    ${sub.disapproval_reason ? `<p style="color:var(--out);">Disapproved: ${escapeHtml(sub.disapproval_reason)}</p>` : ''}
+    ${actionsHtml}
+  `;
+}
+
+window.showDisapproveBox = () => document.getElementById('disapproveBox').style.display = 'block';
+
+window.approveSubmission = async function(id){
+  const { error } = await sb.from('prfaf_submissions').update({
+    status:'approved', approved_by: currentUser.id,
+    approved_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    approved_at: new Date().toISOString(),
+    approval_token: Math.random().toString(36).slice(2,14)
+  }).eq('id', id);
+  if(error){ alert(error.message); return; }
+  closeModal('reviewModalBg'); loadMyRequests();
+};
+
+window.disapproveSubmission = async function(id){
+  const reason = document.getElementById('disapproveReason').value.trim();
+  if(!reason){ alert('Enter a reason.'); return; }
+  const { error } = await sb.from('prfaf_submissions').update({
+    status:'disapproved', disapproval_reason: reason,
+    approved_by: currentUser.id,
+    approved_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    approved_at: new Date().toISOString()
+  }).eq('id', id);
+  if(error){ alert(error.message); return; }
+  closeModal('reviewModalBg'); loadMyRequests();
+};
+
+// Separate disbursement confirmation step (confirmed design choice):
+// approval alone does NOT move money — this action does, and it's the
+// point where the fund_in ledger_transaction is actually created.
+window.confirmDisbursement = async function(id){
+  const amount = parseFloat(document.getElementById('disburseAmount').value);
+  const method = document.getElementById('disburseMethod').value;
+  const reference = document.getElementById('disburseRef').value.trim();
+  if(!amount || amount <= 0){ alert('Enter the disbursed amount.'); return; }
+
+  const { data: sub } = await sb.from('prfaf_submissions').select('*').eq('id', id).single();
+
+  const { data: txn, error: txnErr } = await sb.from('ledger_transactions').insert({
+    ledger_account_id: sub.ledger_account_id,
+    type: 'fund_in', method, amount,
+    department_tag: sub.department_tag,
+    reference_type: 'prfaf', reference_id: sub.id,
+    remarks: `Disbursement for ${sub.serial_no}`,
+    created_by: currentUser.id,
+    created_by_name: currentUser.user_metadata?.full_name || currentUser.email
+  }).select().single();
+  if(txnErr){ alert(txnErr.message); return; }
+
+  const { error } = await sb.from('prfaf_submissions').update({
+    status:'disbursed',
+    disbursed_by: currentUser.id,
+    disbursed_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    disbursed_at: new Date().toISOString(),
+    disbursed_amount: amount, disbursed_method: method, disbursed_reference: reference,
+    fund_in_transaction_id: txn.id
+  }).eq('id', id);
+  if(error){ alert(error.message); return; }
+
+  closeModal('reviewModalBg'); loadMyRequests();
+};
+
+window.completeReconciliation = async function(id){
+  const rows = [...document.querySelectorAll('#reconcileRows .card')];
+  let actualTotal = 0;
+  for(const row of rows){
+    const qtyEl = row.querySelector('.rc-qty'), priceEl = row.querySelector('.rc-price'), photoEl = row.querySelector('.rc-photo');
+    const itemId = qtyEl.dataset.id;
+    const qty = parseFloat(qtyEl.value)||0, price = parseFloat(priceEl.value)||0;
+    actualTotal += qty*price;
+    const file = photoEl.files[0];
+    const receipt_image_url = file ? await uploadAttachment(file) : undefined;
+    const update = { actual_qty: qty, actual_unit_price: price };
+    if(receipt_image_url) update.receipt_image_url = receipt_image_url;
+    await sb.from('prfaf_items').update(update).eq('id', itemId);
+  }
+
+  const { data: sub } = await sb.from('prfaf_submissions').select('*').eq('id', id).single();
+
+  const { data: txn, error: txnErr } = await sb.from('ledger_transactions').insert({
+    ledger_account_id: sub.ledger_account_id,
+    type: 'purchase_out', method: sub.disbursed_method || sub.requested_method,
+    amount: actualTotal,
+    department_tag: sub.department_tag,
+    reference_type: 'prfaf', reference_id: sub.id,
+    remarks: `Actual purchase for ${sub.serial_no}`,
+    created_by: currentUser.id,
+    created_by_name: currentUser.user_metadata?.full_name || currentUser.email
+  }).select().single();
+  if(txnErr){ alert(txnErr.message); return; }
+
+  const { error } = await sb.from('prfaf_submissions').update({
+    status:'completed', completed_at: new Date().toISOString(),
+    purchase_out_transaction_id: txn.id
+  }).eq('id', id);
+  if(error){ alert(error.message); return; }
+
+  closeModal('reviewModalBg'); loadMyRequests();
+};
+
+// ---------------------------------------------------------------------
+// UTIL
+// ---------------------------------------------------------------------
+function fmt(n){ return (Number(n)||0).toFixed(2); }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtmlAttr(s){ return escapeHtml(s); }
+</script>
+</body>
+</html>
