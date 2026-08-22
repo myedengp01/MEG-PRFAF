@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEG-PRFAF v2026.08.22-09:30</title>
+<title>MEG-PRFAF v2026.08.22-10:15</title>
 <style>
   :root{
     --navy:#1c3d6e;
@@ -112,6 +112,54 @@
 
   .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:.85rem;}
   .approver-panel{background:#fff8e1;border:1px solid #e6d28a;border-radius:8px;padding:12px 16px;margin-bottom:16px;}
+
+  /* ---------- Pastel table headers (matches MTCF/SCF convention) ---------- */
+  thead th{background:#f7b8cc4d;}
+
+  /* ---------- Draft picker ---------- */
+  .draft-pick-item{cursor:pointer;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;}
+  .draft-pick-item:hover{background:#f7f9fc;border-color:var(--navy);}
+  .draft-pick-item .meta{font-size:12px;color:var(--muted);}
+
+  /* ---------- Receipt / reference photo picker ---------- */
+  .receipt-cell{text-align:center;}
+  .receipt-btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--navy);}
+  .receipt-btn.has-photo{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .receipt-thumbs{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;}
+  .receipt-thumb{position:relative;width:100px;}
+  .receipt-thumb img{width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block;}
+  .receipt-thumb .del-btn{position:absolute;top:-6px;right:-6px;background:var(--out);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;line-height:1;}
+  .receipt-add-row{display:flex;gap:8px;align-items:center;margin-top:10px;}
+  .receipt-source-btn{flex:1;padding:10px;border:1px solid var(--navy);border-radius:7px;background:#fff;color:var(--navy);font-size:13.5px;font-weight:600;cursor:pointer;}
+  .receipt-source-btn:hover{background:var(--navy);color:#fff;}
+  .receipt-source-btn.primary{background:var(--navy);color:#fff;}
+  .receipt-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px;}
+
+  /* ---------- Crop + enhance editor ---------- */
+  .crop-modal-box{width:min(94vw,480px);max-height:92vh;max-height:92dvh;display:flex;flex-direction:column;padding:16px;overflow:hidden;}
+  .crop-modal-title{margin:0 0 10px;flex:none;}
+  .crop-stage-wrap{text-align:center;flex:1 1 auto;min-height:0;overflow:auto;}
+  .crop-stage{position:relative;display:inline-block;max-width:100%;background:#111;border-radius:8px;touch-action:none;user-select:none;line-height:0;}
+  .crop-stage img{display:block;max-width:100%;max-height:42vh;max-height:42dvh;pointer-events:none;}
+  .crop-modal-footer{flex:none;}
+  .crop-box{position:absolute;border:2px solid #fff;box-shadow:0 0 0 2000px rgba(0,0,0,.5);cursor:move;touch-action:none;}
+  .crop-handle{position:absolute;width:20px;height:20px;background:#fff;border:2px solid var(--navy);border-radius:50%;touch-action:none;}
+  .crop-handle[data-h="nw"]{top:-10px;left:-10px;cursor:nwse-resize;}
+  .crop-handle[data-h="ne"]{top:-10px;right:-10px;cursor:nesw-resize;}
+  .crop-handle[data-h="sw"]{bottom:-10px;left:-10px;cursor:nesw-resize;}
+  .crop-handle[data-h="se"]{bottom:-10px;right:-10px;cursor:nwse-resize;}
+  .crop-hint{font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px;}
+  .enhance-toggle{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer;}
+  .crop-actions{display:flex;gap:8px;margin-top:14px;}
+
+  /* ---------- PDF action row ---------- */
+  .pdf-actions{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .pdf-actions button{padding:7px 14px;border-radius:6px;border:1px solid var(--navy);background:#fff;color:var(--navy);font-weight:600;font-size:12.5px;cursor:pointer;}
+  .pdf-actions .pdf-note{font-size:11.5px;color:var(--muted);flex-basis:100%;}
+
+  /* ---------- Transfer / department report ---------- */
+  .transfer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:600px){.transfer-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -167,12 +215,23 @@
     <button id="navRequests" class="active" onclick="switchView('requests')">🧾 Purchase Requests</button>
     <button id="navLedger" onclick="switchView('ledger')">💰 Account Ledger</button>
     <button id="navAdmin" hidden onclick="switchView('admin')">📋 Admin</button>
+    <button onclick="openLoadDraftModal()">📂 Load Draft</button>
     <button onclick="doSignOut()">Log Out</button>
   </div>
 
   <!-- ============ PURCHASE REQUESTS VIEW ============ -->
   <div id="viewRequests" class="sheet">
-    <p class="section-title">Purchase Requests</p>
+    <div class="form-header">
+      <div class="logo-box"><img src="https://i.postimg.cc/Bb15Phb1/My-Eden-Group-Logo-icon-color.png" alt="MyEden Group"></div>
+      <div class="title-box">
+        <div class="company-name">MYEDEN GROUP OF COMPANIES</div>
+        <div class="form-title">Purchase Request &amp; Funding Application (PRFAF)</div>
+      </div>
+      <div class="serial-box">
+        <div class="label">Form Code</div>
+        <div class="serial-display">PRFAF</div>
+      </div>
+    </div>
     <p class="section-sub">Submit a request, track approval, confirm disbursement, and reconcile actual spend.</p>
 
     <div class="toolbar-row">
@@ -194,18 +253,20 @@
 
   <!-- ============ ACCOUNT LEDGER VIEW ============ -->
   <div id="viewLedger" class="sheet" style="display:none;">
-    <p class="section-title">Account Ledger</p>
-    <p class="section-sub">Live cash / online / card balances per entity, derived from every fund-in and purchase-out transaction.</p>
-
-    <div class="tabs" id="ledgerTabs"></div>
-
-    <div class="form-header" id="ledgerLetterhead" style="border-bottom-width:2px;padding-bottom:10px;margin-bottom:14px;">
+    <div class="form-header" id="ledgerLetterhead">
       <div class="logo-box" id="ledgerLogoBox"></div>
       <div class="title-box">
         <div class="company-name" id="ledgerNameDisplay">—</div>
-        <div class="form-title">Account Ledger</div>
+        <div class="form-title">Account Ledger — Live Balance</div>
+      </div>
+      <div class="serial-box">
+        <div class="label">Form Code</div>
+        <div class="serial-display">PRFAF</div>
       </div>
     </div>
+    <p class="section-sub">Live cash / online / card balances per entity, derived from every fund-in and purchase-out transaction.</p>
+
+    <div class="tabs" id="ledgerTabs"></div>
 
     <div class="grid3" id="ledgerBalanceCards"></div>
 
@@ -232,7 +293,17 @@
 
   <!-- ============ ADMIN VIEW ============ -->
   <div id="viewAdmin" class="sheet" style="display:none;">
-    <p class="section-title">Admin — Ledgers Overview</p>
+    <div class="form-header">
+      <div class="logo-box"><img src="https://i.postimg.cc/Bb15Phb1/My-Eden-Group-Logo-icon-color.png" alt="MyEden Group"></div>
+      <div class="title-box">
+        <div class="company-name">MYEDEN GROUP OF COMPANIES</div>
+        <div class="form-title">PRFAF — Admin Ledgers Overview</div>
+      </div>
+      <div class="serial-box">
+        <div class="label">Access Level</div>
+        <div class="serial-display">Administrator</div>
+      </div>
+    </div>
     <p class="section-sub">All entities at a glance, plus pending special-occasion ledgers awaiting approval.</p>
 
     <div class="approver-panel">
@@ -248,6 +319,31 @@
       <thead><tr><th>Entity</th><th class="num">Cash</th><th class="num">Online</th><th class="num">Card</th><th class="num">Total</th></tr></thead>
       <tbody id="allBalancesTbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
     </table>
+
+    <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px;">
+      <strong style="font-size:.85rem;color:var(--navy);">Transfer Between Ledgers</strong>
+      <p class="section-sub" style="margin-top:4px;">e.g. MyEden Group topping up MyEden Edu Hub's petty cash. Posts a paired transfer-out / transfer-in.</p>
+      <div class="transfer-grid">
+        <div><label class="f">From Ledger</label><select id="transferFrom"></select></div>
+        <div><label class="f">To Ledger</label><select id="transferTo"></select></div>
+        <div><label class="f">Amount (RM)</label><input id="transferAmount" type="number" step="0.01"></div>
+        <div><label class="f">Method</label><select id="transferMethod"><option value="cash">Cash</option><option value="online">Online</option><option value="card">Card</option></select></div>
+      </div>
+      <label class="f">Remarks</label>
+      <input id="transferRemarks" placeholder="e.g. To E3/E3+ Petty Cash Summary">
+      <div class="toolbar-row" style="margin-top:10px;">
+        <button class="btn-sm btn-accent" onclick="submitTransfer()">Record Transfer</button>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px;">
+      <strong style="font-size:.85rem;color:var(--navy);">Department Breakdown</strong>
+      <p class="section-sub" style="margin-top:4px;">Fund-in vs. purchase-out per department tag (E1, E3, E6, E7, E8/HQ, E10…), across all ledgers.</p>
+      <table style="margin-top:8px;">
+        <thead><tr><th>Department</th><th class="num">Fund In</th><th class="num">Purchase Out</th><th class="num">Net</th></tr></thead>
+        <tbody id="deptReportTbody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -282,7 +378,7 @@
 
     <label class="f">Items</label>
     <table class="items-table">
-      <thead><tr><th>Item</th><th style="width:70px;">Qty</th><th style="width:100px;">Unit Price (RM)</th><th style="width:90px;">Subtotal</th><th style="width:80px;">Photo</th><th></th></tr></thead>
+      <thead><tr><th>Item</th><th style="width:70px;">Qty</th><th style="width:100px;">Unit Price (RM)</th><th style="width:90px;">Subtotal</th><th style="width:70px;">Photo</th><th></th></tr></thead>
       <tbody id="reqItemsTbody"></tbody>
     </table>
     <button class="btn-sm" style="margin-top:8px;" onclick="addItemRow()">+ Add Item</button>
@@ -300,7 +396,10 @@
     <div class="toolbar-row" style="margin-top:16px;">
       <button class="btn-sm" onclick="saveDraftRequest()">💾 Save Draft</button>
       <button class="btn-sm btn-accent" onclick="submitRequest()">✅ Submit for Approval</button>
+      <button class="btn-sm" onclick="printReqModal()">🖨️ Print / Save PDF</button>
+      <button class="btn-sm" onclick="shareReqModal()">📤 Share to WhatsApp</button>
     </div>
+    <div class="status-msg" id="reqStatusMsg" style="font-size:12px;color:var(--muted);text-align:right;"></div>
   </div>
 </div>
 
@@ -309,12 +408,75 @@
   <div class="modal-box">
     <span class="modal-close" onclick="closeModal('reviewModal')">✕</span>
     <div id="reviewModalBody"></div>
+    <div class="pdf-actions" id="reviewPdfActions" style="display:none;">
+      <span class="pdf-note" id="reviewPdfNote"></span>
+      <button id="reviewSavePdfBtn">💾 Save PDF</button>
+      <button id="reviewSharePdfBtn">📤 Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- Load Draft modal -->
+<div class="modal-overlay" id="loadDraftModal">
+  <div class="modal-box" style="max-width:520px;">
+    <span class="modal-close" onclick="closeLoadDraftModal()">✕</span>
+    <h3>Load a Saved Draft</h3>
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 14px;">Loading a draft opens it for editing.</p>
+    <div id="draftPickerList" style="max-height:360px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- Receipt / reference photo modal -->
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal-box" style="max-width:420px;">
+    <span class="modal-close" onclick="closeReceiptPanel()">✕</span>
+    <h3 id="receiptModalTitle">Photo</h3>
+    <div class="receipt-thumbs" id="receiptThumbs"></div>
+    <div class="receipt-add-row">
+      <button type="button" class="receipt-source-btn" onclick="document.getElementById('receiptCameraInput').click()">📷 Camera</button>
+      <button type="button" class="receipt-source-btn" onclick="document.getElementById('receiptGalleryInput').click()">🖼️ Gallery</button>
+      <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="receiptGalleryInput" accept="image/*" style="display:none;">
+    </div>
+    <div class="receipt-status" id="receiptStatus"></div>
+  </div>
+</div>
+
+<!-- Crop / enhance editor -->
+<div class="modal-overlay" id="receiptEditModal">
+  <div class="modal-box crop-modal-box">
+    <span class="modal-close" onclick="cancelReceiptEdit()">✕</span>
+    <h3 class="crop-modal-title">Adjust Photo</h3>
+    <div class="crop-stage-wrap">
+      <div class="crop-stage" id="cropStage">
+        <img id="cropImage" draggable="false" alt="Photo to crop">
+        <div class="crop-box" id="cropBox">
+          <div class="crop-handle" data-h="nw"></div>
+          <div class="crop-handle" data-h="ne"></div>
+          <div class="crop-handle" data-h="sw"></div>
+          <div class="crop-handle" data-h="se"></div>
+        </div>
+      </div>
+    </div>
+    <div class="crop-modal-footer">
+      <div class="crop-hint">Drag the corners to crop, or drag inside the box to move it.</div>
+      <label class="enhance-toggle">
+        <input type="checkbox" id="enhanceToggle" checked>
+        ✨ Enhance (boost contrast, like a document scan)
+      </label>
+      <div class="crop-actions">
+        <button type="button" class="receipt-source-btn" onclick="cancelReceiptEdit()">Cancel</button>
+        <button type="button" class="receipt-source-btn primary" id="usePhotoBtn">Use Photo</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-window.VERSION_STAMP = 'MEG-PRFAF v2026.08.22-09:30';
+window.VERSION_STAMP = 'MEG-PRFAF v2026.08.22-10:15';
 document.title = window.VERSION_STAMP;
 document.getElementById('stampLogin').textContent = window.VERSION_STAMP;
 document.getElementById('stampToolbar').textContent = 'PRFAF Digital Form · ' + window.VERSION_STAMP;
@@ -349,6 +511,16 @@ let pendingLedgerAccounts = [];
 let currentLedgerId = null;
 let itemRowSeq = 0;
 let editingSubmissionId = null;
+let currentReviewSub = null;
+let currentReviewItems = null;
+let currentReviewPdfUrl = null;
+
+// Crop/enhance editor state
+let currentPhotoTarget = null; // { type:'req-item', rowId } | { type:'recon-item', itemId }
+let cropFile = null;
+let cropRect = { x: 8, y: 8, w: 84, h: 84 };
+let cropDragMode = null;
+let cropDragStart = null;
 
 // ---------------------------------------------------------------------
 // AUTH UI
@@ -433,6 +605,19 @@ async function bootApp(){
 
   await loadLedgerAccounts();
   await loadMyRequests();
+
+  await openReviewFromUrlIfPresent();
+}
+
+// Opens the review modal directly when arriving via admin.html's
+// cross-form detail redirect (?review=<id>), same pattern as MEG-TEC-V2.
+async function openReviewFromUrlIfPresent(){
+  const params = new URLSearchParams(window.location.search);
+  const reviewId = params.get('review');
+  if(!reviewId) return;
+  const { data: sub, error } = await sb.from('prfaf_submissions').select('id').eq('id', reviewId).maybeSingle();
+  if(error || !sub){ alert('Could not find that PRFAF submission — it may have been deleted.'); return; }
+  await openReview(reviewId);
 }
 
 // ---------------------------------------------------------------------
@@ -570,6 +755,8 @@ async function requestNewLedger(){
 // ADMIN VIEW
 // ---------------------------------------------------------------------
 async function loadAdminView(){
+  populateTransferSelects();
+  loadDeptReport();
   const { data: pending } = await sb.from('ledger_accounts').select('*').eq('status','pending').order('created_at');
   const ptb = document.getElementById('pendingLedgersTbody');
   if(!pending || !pending.length){ ptb.innerHTML = '<tr><td colspan="4" class="empty">None pending.</td></tr>'; }
@@ -605,6 +792,84 @@ async function approveLedger(id){
   if(error){ alert(error.message); return; }
   await loadAdminView();
   await loadLedgerAccounts();
+}
+
+// ---------------------------------------------------------------------
+// TRANSFERS BETWEEN LEDGERS (admin)
+// ---------------------------------------------------------------------
+function populateTransferSelects(){
+  const opts = ledgerAccounts.map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('');
+  const fromSel = document.getElementById('transferFrom');
+  const toSel = document.getElementById('transferTo');
+  if(fromSel){ fromSel.innerHTML = opts; }
+  if(toSel){ toSel.innerHTML = opts; }
+}
+
+async function submitTransfer(){
+  const fromId = document.getElementById('transferFrom').value;
+  const toId = document.getElementById('transferTo').value;
+  const amount = parseFloat(document.getElementById('transferAmount').value);
+  const method = document.getElementById('transferMethod').value;
+  const remarks = document.getElementById('transferRemarks').value.trim();
+
+  if(!fromId || !toId || fromId === toId){ alert('Pick two different ledgers.'); return; }
+  if(!amount || amount <= 0){ alert('Enter a transfer amount.'); return; }
+
+  const fromLedger = ledgerAccounts.find(l => l.id === fromId);
+  const toLedger = ledgerAccounts.find(l => l.id === toId);
+  const note = remarks || `Transfer: ${fromLedger?.name||''} → ${toLedger?.name||''}`;
+
+  const { data: outTxn, error: outErr } = await sb.from('ledger_transactions').insert({
+    ledger_account_id: fromId, type:'transfer_out', method, amount,
+    remarks: note, created_by: currentUser.id,
+    created_by_name: currentUser.user_metadata?.full_name || currentUser.email
+  }).select().single();
+  if(outErr){ alert(outErr.message); return; }
+
+  const { data: inTxn, error: inErr } = await sb.from('ledger_transactions').insert({
+    ledger_account_id: toId, type:'transfer_in', method, amount,
+    remarks: note, created_by: currentUser.id,
+    created_by_name: currentUser.user_metadata?.full_name || currentUser.email,
+    linked_transaction_id: outTxn.id
+  }).select().single();
+  if(inErr){ alert(inErr.message); return; }
+
+  await sb.from('ledger_transactions').update({ linked_transaction_id: inTxn.id }).eq('id', outTxn.id);
+
+  document.getElementById('transferAmount').value = '';
+  document.getElementById('transferRemarks').value = '';
+  alert('Transfer recorded.');
+  await loadAdminView();
+  if(currentLedgerId) loadLedgerBalances(currentLedgerId), loadLedgerTransactions(currentLedgerId);
+}
+
+// ---------------------------------------------------------------------
+// DEPARTMENT BREAKDOWN REPORT (admin)
+// ---------------------------------------------------------------------
+async function loadDeptReport(){
+  const { data } = await sb.from('ledger_transactions').select('department_tag,type,amount');
+  const tbody = document.getElementById('deptReportTbody');
+  if(!data || !data.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty">No transactions yet.</td></tr>'; return; }
+
+  const byDept = {};
+  data.forEach(t => {
+    const dept = t.department_tag || '(none)';
+    if(!byDept[dept]) byDept[dept] = { fundIn:0, purchaseOut:0 };
+    if(t.type === 'fund_in') byDept[dept].fundIn += Number(t.amount)||0;
+    if(t.type === 'purchase_out') byDept[dept].purchaseOut += Number(t.amount)||0;
+  });
+
+  const depts = Object.keys(byDept).sort();
+  tbody.innerHTML = depts.map(d => {
+    const r = byDept[d];
+    const net = r.fundIn - r.purchaseOut;
+    return `<tr>
+      <td>${escapeHtml(d)}</td>
+      <td class="num in">RM ${fmt(r.fundIn)}</td>
+      <td class="num out">RM ${fmt(r.purchaseOut)}</td>
+      <td class="num subtotal">RM ${fmt(net)}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------
@@ -660,12 +925,13 @@ function addItemRow(prefill){
   const tbody = document.getElementById('reqItemsTbody');
   const tr = document.createElement('tr');
   tr.id = id;
+  tr.dataset.refPhotoUrl = prefill?.reference_image_url || '';
   tr.innerHTML = `
     <td><input class="it-name" value="${prefill?escapeHtml(prefill.item_name):''}"></td>
     <td><input class="it-qty" type="number" step="0.01" value="${prefill?prefill.projected_qty:1}" oninput="recalcRow('${id}')"></td>
     <td><input class="it-price" type="number" step="0.01" value="${prefill?prefill.projected_unit_price:''}" oninput="recalcRow('${id}')"></td>
     <td class="num subtotal it-subtotal">RM 0.00</td>
-    <td><input class="it-photo" type="file" accept="image/*"></td>
+    <td class="receipt-cell"><button type="button" class="receipt-btn ${tr.dataset.refPhotoUrl?'has-photo':''}" id="${id}-photobtn" onclick="openItemRefPhoto('${id}')">${tr.dataset.refPhotoUrl?'✓':'📷'}</button></td>
     <td><button class="btn-sm" onclick="document.getElementById('${id}').remove(); recalcTotal();">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -693,13 +959,14 @@ function recalcTotal(){
 }
 document.getElementById('reqAmount').addEventListener('input', function(){ this.dataset.userEdited = '1'; });
 
-async function uploadAttachment(file){
-  if(!file) return null;
-  const path = `${currentUser.id}/${Date.now()}_${file.name}`;
-  const { error } = await sb.storage.from('prfaf-attachments').upload(path, file);
-  if(error){ console.error(error); return null; }
-  const { data } = sb.storage.from('prfaf-attachments').getPublicUrl(path);
-  return data.publicUrl;
+// A new request has no submission id until first saved — photos need a
+// stable folder to upload into, so silently save a draft first if one
+// doesn't exist yet, without disrupting a full "submit" mid-attach-a-photo.
+async function ensureDraftSaved(){
+  if(editingSubmissionId) return editingSubmissionId;
+  if(!currentUser){ alert('Please sign in first.'); return null; }
+  const id = await saveSubmission('draft');
+  return id;
 }
 
 async function collectItems(){
@@ -710,9 +977,7 @@ async function collectItems(){
     if(!item_name) continue;
     const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
     const price = parseFloat(tr.querySelector('.it-price').value) || 0;
-    const file = tr.querySelector('.it-photo').files[0];
-    const reference_image_url = file ? await uploadAttachment(file) : null;
-    items.push({ item_name, projected_qty: qty, projected_unit_price: price, reference_image_url });
+    items.push({ item_name, projected_qty: qty, projected_unit_price: price, reference_image_url: tr.dataset.refPhotoUrl || null });
   }
   return items;
 }
@@ -752,6 +1017,7 @@ async function saveSubmission(status){
     const { data, error } = await sb.from('prfaf_submissions').insert(payload).select().single();
     if(error){ alert(error.message); return null; }
     submissionId = data.id;
+    editingSubmissionId = submissionId; // subsequent saves in this modal session update, not duplicate
   }
 
   const items = await collectItems();
@@ -805,6 +1071,8 @@ async function openReview(id){
 }
 
 function renderReview(sub, items){
+  currentReviewSub = sub;
+  currentReviewItems = items;
   const projTotal = items.reduce((s,i)=>s+(i.projected_subtotal||0),0);
   const actTotal = items.reduce((s,i)=>s+(i.actual_subtotal||0),0);
   const isApprover = currentPerm.can_approve || currentPerm.is_admin;
@@ -856,13 +1124,14 @@ function renderReview(sub, items){
 
   if(sub.status === 'disbursed' && isOwner){
     actionsHtml = `
-      <p class="section-sub">Enter actual prices and upload receipt photos for each item, then mark complete.</p>
+      <p class="section-sub">Enter actual prices and attach a receipt photo for each item, then mark complete.</p>
       <div id="reconcileRows">${items.map(it => `
         <div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;">
           <strong>${escapeHtml(it.item_name)}</strong>
           <label class="f">Actual Qty</label><input class="rc-qty" type="number" step="0.01" data-id="${it.id}" value="${it.actual_qty ?? it.projected_qty ?? 1}">
           <label class="f">Actual Unit Price (RM)</label><input class="rc-price" type="number" step="0.01" data-id="${it.id}" value="${it.actual_unit_price ?? it.projected_unit_price ?? ''}">
-          <label class="f">Receipt Photo</label><input class="rc-photo" type="file" accept="image/*" data-id="${it.id}">
+          <label class="f">Receipt Photo</label>
+          <button type="button" class="receipt-btn ${it.receipt_image_url?'has-photo':''}" id="recon-${it.id}-btn" onclick="openReconPhoto('${it.id}')">${it.receipt_image_url?'✓ Photo attached':'📷 Attach Photo'}</button>
         </div>`).join('')}
       </div>
       <div class="toolbar-row" style="margin-top:10px;">
@@ -896,7 +1165,12 @@ function renderReview(sub, items){
     ${sub.disbursed_amount ? `<p>Disbursed: RM ${fmt(sub.disbursed_amount)} (${sub.disbursed_method}) by ${escapeHtml(sub.disbursed_by_name||'')}</p>` : ''}
     ${sub.disapproval_reason ? `<p style="color:var(--out);">Disapproved: ${escapeHtml(sub.disapproval_reason)}</p>` : ''}
     ${actionsHtml}
+    <div class="toolbar-row" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;">
+      <button class="btn-sm" onclick="printReviewPdf()">🖨️ Print / Save PDF</button>
+      <button class="btn-sm" onclick="shareReviewPdf()">📤 Share to WhatsApp</button>
+    </div>
   `;
+  document.getElementById('reviewPdfActions').style.display = 'none';
 }
 
 function showDisapproveBox(){ document.getElementById('disapproveBox').style.display = 'block'; }
@@ -909,7 +1183,9 @@ async function approveSubmission(id){
     approval_token: Math.random().toString(36).slice(2,14)
   }).eq('id', id);
   if(error){ alert(error.message); return; }
-  closeModal('reviewModal'); loadMyRequests();
+  loadMyRequests();
+  await openReview(id);
+  await generateAndShowReviewPdf('Approved — stamped PDF ready below.');
 }
 
 async function disapproveSubmission(id){
@@ -922,7 +1198,9 @@ async function disapproveSubmission(id){
     approved_at: new Date().toISOString()
   }).eq('id', id);
   if(error){ alert(error.message); return; }
-  closeModal('reviewModal'); loadMyRequests();
+  loadMyRequests();
+  await openReview(id);
+  await generateAndShowReviewPdf('Disapproved — record PDF ready below.');
 }
 
 async function confirmDisbursement(id){
@@ -1000,6 +1278,445 @@ async function completeReconciliation(id){
 // ---------------------------------------------------------------------
 function fmt(n){ return (Number(n)||0).toFixed(2); }
 function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------------------------------------------------------------------
+// PHOTO CAPTURE — Camera/Gallery -> Crop & Enhance -> upload
+// (mirrors the MTCF journey-proof flow: source picker, drag-to-crop with
+// corner handles, optional contrast/brightness "document scan" boost)
+// ---------------------------------------------------------------------
+function openItemRefPhoto(rowId){
+  const tr = document.getElementById(rowId);
+  currentPhotoTarget = { type:'req-item', rowId };
+  document.getElementById('receiptModalTitle').textContent = 'Item Reference Photo';
+  document.getElementById('receiptStatus').textContent = '';
+  renderReceiptThumb(tr.dataset.refPhotoUrl || '');
+  document.getElementById('receiptModal').classList.add('show');
+}
+
+function openReconPhoto(itemId){
+  const item = (currentReviewItems||[]).find(i => i.id === itemId);
+  currentPhotoTarget = { type:'recon-item', itemId };
+  document.getElementById('receiptModalTitle').textContent = 'Receipt Photo';
+  document.getElementById('receiptStatus').textContent = '';
+  renderReceiptThumb(item?.receipt_image_url || '');
+  document.getElementById('receiptModal').classList.add('show');
+}
+
+function closeReceiptPanel(){
+  document.getElementById('receiptModal').classList.remove('show');
+  currentPhotoTarget = null;
+}
+
+function renderReceiptThumb(url){
+  const thumbsEl = document.getElementById('receiptThumbs');
+  if(!url){ thumbsEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">No photo attached yet.</div>'; return; }
+  thumbsEl.innerHTML = `<div class="receipt-thumb"><img src="${url}" alt="Photo"><button type="button" class="del-btn" onclick="deleteCurrentPhoto()">✕</button></div>`;
+}
+
+async function deleteCurrentPhoto(){
+  if(!currentPhotoTarget) return;
+  if(!confirm('Remove this photo?')) return;
+  if(currentPhotoTarget.type === 'req-item'){
+    const tr = document.getElementById(currentPhotoTarget.rowId);
+    tr.dataset.refPhotoUrl = '';
+    const btn = document.getElementById(currentPhotoTarget.rowId + '-photobtn');
+    if(btn){ btn.classList.remove('has-photo'); btn.textContent = '📷'; }
+  } else if(currentPhotoTarget.type === 'recon-item'){
+    await sb.from('prfaf_items').update({ receipt_image_url: null }).eq('id', currentPhotoTarget.itemId);
+    const item = (currentReviewItems||[]).find(i => i.id === currentPhotoTarget.itemId);
+    if(item) item.receipt_image_url = null;
+    const btn = document.getElementById('recon-' + currentPhotoTarget.itemId + '-btn');
+    if(btn){ btn.classList.remove('has-photo'); btn.textContent = '📷 Attach Photo'; }
+  }
+  renderReceiptThumb('');
+}
+
+function handleReceiptFileChosen(e){
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file || !currentPhotoTarget) return;
+  openCropEditor(file);
+}
+document.getElementById('receiptCameraInput').addEventListener('change', handleReceiptFileChosen);
+document.getElementById('receiptGalleryInput').addEventListener('change', handleReceiptFileChosen);
+
+function clampNum(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+function openCropEditor(file){
+  cropFile = file;
+  const imgEl = document.getElementById('cropImage');
+  const url = URL.createObjectURL(file);
+  imgEl.onload = () => { cropRect = { x:8, y:8, w:84, h:84 }; positionCropBox(); };
+  imgEl.src = url;
+  document.getElementById('enhanceToggle').checked = true;
+  document.getElementById('receiptEditModal').classList.add('show');
+}
+function cancelReceiptEdit(){
+  document.getElementById('receiptEditModal').classList.remove('show');
+  cropFile = null;
+}
+function positionCropBox(){
+  const boxEl = document.getElementById('cropBox');
+  boxEl.style.left = cropRect.x + '%';
+  boxEl.style.top = cropRect.y + '%';
+  boxEl.style.width = cropRect.w + '%';
+  boxEl.style.height = cropRect.h + '%';
+}
+function stagePercentFromEvent(e){
+  const rect = document.getElementById('cropStage').getBoundingClientRect();
+  return {
+    x: clampNum(((e.clientX - rect.left) / rect.width) * 100, 0, 100),
+    y: clampNum(((e.clientY - rect.top) / rect.height) * 100, 0, 100)
+  };
+}
+function onCropPointerDown(e, mode){
+  cropDragMode = mode;
+  const p = stagePercentFromEvent(e);
+  cropDragStart = { px:p.x, py:p.y, rect:{...cropRect} };
+  e.preventDefault();
+}
+function onCropPointerMove(e){
+  if(!cropDragMode) return;
+  const p = stagePercentFromEvent(e);
+  const dx = p.x - cropDragStart.px, dy = p.y - cropDragStart.py;
+  const r0 = cropDragStart.rect;
+  let r = {...r0};
+  if(cropDragMode === 'move'){
+    r.x = clampNum(r0.x + dx, 0, 100 - r0.w);
+    r.y = clampNum(r0.y + dy, 0, 100 - r0.h);
+  } else {
+    if(cropDragMode.includes('w')){ const right = r0.x + r0.w; r.x = clampNum(r0.x + dx, 0, right - 5); r.w = right - r.x; }
+    if(cropDragMode.includes('e')){ r.w = clampNum(r0.w + dx, 5, 100 - r0.x); }
+    if(cropDragMode.includes('n')){ const bottom = r0.y + r0.h; r.y = clampNum(r0.y + dy, 0, bottom - 5); r.h = bottom - r.y; }
+    if(cropDragMode.includes('s')){ r.h = clampNum(r0.h + dy, 5, 100 - r0.y); }
+  }
+  cropRect = r;
+  positionCropBox();
+}
+function onCropPointerUp(){ cropDragMode = null; cropDragStart = null; }
+document.getElementById('cropBox').addEventListener('pointerdown', e => {
+  if(e.target.classList.contains('crop-handle')) return;
+  onCropPointerDown(e, 'move');
+});
+document.querySelectorAll('.crop-handle').forEach(h => {
+  h.addEventListener('pointerdown', e => onCropPointerDown(e, h.dataset.h));
+});
+document.addEventListener('pointermove', onCropPointerMove);
+document.addEventListener('pointerup', onCropPointerUp);
+
+function cropAndEnhanceToBlob(){
+  return new Promise((resolve, reject) => {
+    const imgEl = document.getElementById('cropImage');
+    const nw = imgEl.naturalWidth, nh = imgEl.naturalHeight;
+    const sx = (cropRect.x/100)*nw, sy = (cropRect.y/100)*nh;
+    const sw = (cropRect.w/100)*nw, sh = (cropRect.h/100)*nh;
+    const maxDim = 1600;
+    let outW = sw, outH = sh;
+    if(outW > maxDim || outH > maxDim){
+      const scale = maxDim / Math.max(outW, outH);
+      outW = Math.round(outW*scale); outH = Math.round(outH*scale);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = outW; canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+    if(document.getElementById('enhanceToggle').checked){
+      ctx.filter = 'contrast(135%) brightness(112%) saturate(40%)';
+    }
+    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, outW, outH);
+    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Failed to process image')), 'image/jpeg', 0.85);
+  });
+}
+
+document.getElementById('usePhotoBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('usePhotoBtn');
+  btn.disabled = true; btn.textContent = 'Processing…';
+  try{
+    const blob = await cropAndEnhanceToBlob();
+    document.getElementById('receiptEditModal').classList.remove('show');
+    await uploadPhotoForTarget(blob);
+  }catch(err){
+    console.error(err);
+    alert('Failed to process the photo: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Use Photo';
+  }
+});
+
+async function uploadPhotoForTarget(blob){
+  const statusEl = document.getElementById('receiptStatus');
+  statusEl.textContent = 'Uploading…';
+  try{
+    if(currentPhotoTarget.type === 'req-item'){
+      const submissionId = await ensureDraftSaved();
+      if(!submissionId) { statusEl.textContent = 'Could not prepare draft.'; return; }
+      const path = `${submissionId}/item-ref/${currentPhotoTarget.rowId}-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from('prfaf-attachments').upload(path, blob, { contentType:'image/jpeg' });
+      if(error){ statusEl.textContent = 'Upload failed: ' + error.message; return; }
+      const { data } = sb.storage.from('prfaf-attachments').getPublicUrl(path);
+      const tr = document.getElementById(currentPhotoTarget.rowId);
+      tr.dataset.refPhotoUrl = data.publicUrl;
+      const photoBtn = document.getElementById(currentPhotoTarget.rowId + '-photobtn');
+      if(photoBtn){ photoBtn.classList.add('has-photo'); photoBtn.textContent = '✓'; }
+      renderReceiptThumb(data.publicUrl);
+    } else if(currentPhotoTarget.type === 'recon-item'){
+      const path = `${currentPhotoTarget.itemId}/receipt-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from('prfaf-attachments').upload(path, blob, { contentType:'image/jpeg' });
+      if(error){ statusEl.textContent = 'Upload failed: ' + error.message; return; }
+      const { data } = sb.storage.from('prfaf-attachments').getPublicUrl(path);
+      await sb.from('prfaf_items').update({ receipt_image_url: data.publicUrl }).eq('id', currentPhotoTarget.itemId);
+      const item = (currentReviewItems||[]).find(i => i.id === currentPhotoTarget.itemId);
+      if(item) item.receipt_image_url = data.publicUrl;
+      const btn = document.getElementById('recon-' + currentPhotoTarget.itemId + '-btn');
+      if(btn){ btn.classList.add('has-photo'); btn.textContent = '✓ Photo attached'; }
+      renderReceiptThumb(data.publicUrl);
+    }
+    statusEl.textContent = 'Attached.';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+  }
+}
+
+// ---------------------------------------------------------------------
+// PDF GENERATION (html2canvas + jsPDF, same pipeline as MTCF)
+// ---------------------------------------------------------------------
+async function generatePDFBlob(sheetEl){
+  const canvas = await html2canvas(sheetEl, { scale:2, useCORS:true });
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = 210, pageHeight = 297;
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  let heightLeft = imgHeight, position = 0;
+  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+  while(heightLeft > 0){
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+  return pdf.output('blob');
+}
+
+function buildPrfafFileName(sub, statusLabel){
+  const safe = (sub.serial_no || 'PRFAF_draft').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'');
+  return `${safe}${statusLabel ? '_'+statusLabel : ''}.pdf`;
+}
+
+// Builds a read-only, letterhead-styled rendering of a request (reusing the
+// .sheet/.form-header classes) for capture — same approach as MTCF's
+// makeReadOnlySheetHtml, adapted to PRFAF's items/approval/disbursement fields.
+function buildPrfafSheetHtml(sub, items, ledgerHint){
+  const ledger = ledgerHint || ledgerAccounts.find(l => l.id === sub.ledger_account_id) || sub.ledger_accounts;
+  const logo = ledger ? LEDGER_LOGOS[ledger.code] : null;
+  const projTotal = items.reduce((s,i)=>s+((i.projected_qty||0)*(i.projected_unit_price||0)),0);
+  const actTotal = items.reduce((s,i)=>s+((i.actual_qty||0)*(i.actual_unit_price||0)),0);
+  const approvedDate = sub.approved_at ? new Date(sub.approved_at).toLocaleDateString() : '';
+
+  const rowsHtml = items.map(it => `<tr>
+      <td style="text-align:left;">${escapeHtml(it.item_name)}</td>
+      <td class="num">${it.projected_qty||0} × RM ${fmt(it.projected_unit_price)}</td>
+      <td class="num">RM ${fmt((it.projected_qty||0)*(it.projected_unit_price||0))}</td>
+      <td class="num">${it.actual_qty!=null ? it.actual_qty+' × RM '+fmt(it.actual_unit_price) : '—'}</td>
+      <td class="num">${it.actual_qty!=null ? 'RM '+fmt((it.actual_qty||0)*(it.actual_unit_price||0)) : '—'}</td>
+    </tr>`).join('');
+
+  return `
+  <div class="sheet" style="max-width:980px;">
+    <div style="text-align:right;font-size:11px;color:#999;margin-bottom:6px;">${escapeHtml(window.VERSION_STAMP)}</div>
+    <div class="form-header">
+      <div class="logo-box ${logo?'':'event-badge'}">${logo?`<img src="${logo.logo}" alt="${escapeHtml(logo.name)}">`:EVENT_BADGE}</div>
+      <div class="title-box">
+        <div class="company-name">${escapeHtml(ledger?ledger.name.toUpperCase():'')}</div>
+        <div class="form-title">Purchase Request &amp; Funding Application (PRFAF)</div>
+      </div>
+      <div class="serial-box">
+        <div class="label">Serial No.</div>
+        <div class="serial-display">${escapeHtml(sub.serial_no||'Draft — not yet submitted')}</div>
+      </div>
+    </div>
+    <table>
+      <tbody>
+        <tr><td style="text-align:left;width:25%;"><strong>Requested By</strong></td><td style="text-align:left;">${escapeHtml(sub.submitted_by_name||'')}</td>
+            <td style="text-align:left;width:25%;"><strong>Department</strong></td><td style="text-align:left;">${escapeHtml(sub.department_tag||'—')}</td></tr>
+        <tr><td style="text-align:left;"><strong>Purpose</strong></td><td colspan="3" style="text-align:left;">${escapeHtml(sub.purpose||'')}</td></tr>
+      </tbody>
+    </table>
+    <table style="margin-top:10px;">
+      <thead><tr><th>Item</th><th>Projected</th><th>Proj. Subtotal</th><th>Actual</th><th>Actual Subtotal</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot>
+        <tr><td colspan="2" style="text-align:right;"><strong>Projected Total :</strong></td><td class="num">RM ${fmt(projTotal)}</td><td colspan="2"></td></tr>
+        <tr><td colspan="2" style="text-align:right;"><strong>Actual Total :</strong></td><td></td><td class="num">RM ${fmt(actTotal)}</td><td></td></tr>
+      </tfoot>
+    </table>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:13px;">
+      <span>Requested: RM ${fmt(sub.requested_amount)} (${sub.requested_method||''})</span>
+      <span>Status: <strong>${escapeHtml((sub.status||'draft').toUpperCase())}</strong></span>
+    </div>
+    ${sub.disbursed_amount ? `<p style="font-size:13px;">Disbursed: RM ${fmt(sub.disbursed_amount)} (${sub.disbursed_method}) — ref ${escapeHtml(sub.disbursed_reference||'—')}</p>` : ''}
+    ${sub.disapproval_reason ? `<p style="font-size:13px;color:var(--out);">Disapproved: ${escapeHtml(sub.disapproval_reason)}</p>` : ''}
+    <div style="display:flex;justify-content:space-between;margin-top:40px;">
+      <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;">Requester's Signature</div>
+      <div style="width:45%;">
+        <h3 style="margin:0 0 8px;font-size:14px;">Approved By</h3>
+        <div style="font-size:12px;margin-bottom:4px;">Check by: ${escapeHtml(sub.approved_by_name||'')}</div>
+        <div style="font-size:12px;margin-bottom:4px;">Approval Token: ${escapeHtml(sub.approval_token||'(token stamped on approval)')}</div>
+        <div style="font-size:12px;">Date of Approval: ${escapeHtml(approvedDate)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function renderOffscreenAndCapture(html){
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.top = '0';
+  wrapper.style.left = '-10000px';
+  wrapper.style.width = '980px';
+  wrapper.style.background = '#fff';
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
+  try{
+    await new Promise(r => setTimeout(r, 60)); // let the logo image finish loading before capture
+    return await generatePDFBlob(wrapper.querySelector('.sheet'));
+  } finally {
+    wrapper.remove();
+  }
+}
+
+function downloadBlob(blob, fileName){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function shareOrDownloadBlob(blob, fileName){
+  const file = new File([blob], fileName, { type:'application/pdf' });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title:fileName, text:fileName }); return; }
+    catch(e){ console.error('Share cancelled/failed:', e); }
+  }
+  downloadBlob(blob, fileName);
+  alert("Sharing isn't supported on this browser — PDF downloaded instead. Attach it manually in WhatsApp.");
+}
+
+// Print/Share for the live New Request modal (draft not necessarily saved yet)
+function gatherLiveReqAsSub(){
+  const ledgerId = document.getElementById('reqLedger').value;
+  const ledger = ledgerAccounts.find(l => l.id === ledgerId);
+  return {
+    sub: {
+      serial_no: document.getElementById('reqSerialDisplay').textContent === 'Draft — not yet submitted' ? null : document.getElementById('reqSerialDisplay').textContent,
+      submitted_by_name: currentUser?.user_metadata?.full_name || currentUser?.email || '',
+      department_tag: document.getElementById('reqDept').value.trim(),
+      purpose: document.getElementById('reqPurpose').value.trim(),
+      requested_amount: parseFloat(document.getElementById('reqAmount').value) || 0,
+      requested_method: document.getElementById('reqMethod').value,
+      status: 'draft',
+      ledger_account_id: ledgerId
+    },
+    items: [...document.querySelectorAll('#reqItemsTbody tr')].map(tr => ({
+      item_name: tr.querySelector('.it-name').value.trim(),
+      projected_qty: parseFloat(tr.querySelector('.it-qty').value) || 0,
+      projected_unit_price: parseFloat(tr.querySelector('.it-price').value) || 0
+    })).filter(i => i.item_name),
+    ledger
+  };
+}
+
+async function printReqModal(){
+  document.getElementById('reqStatusMsg').textContent = 'Generating PDF…';
+  const { sub, items, ledger } = gatherLiveReqAsSub();
+  const html = buildPrfafSheetHtml(sub, items, ledger);
+  const blob = await renderOffscreenAndCapture(html);
+  downloadBlob(blob, buildPrfafFileName(sub));
+  document.getElementById('reqStatusMsg').textContent = 'PDF downloaded.';
+}
+
+async function shareReqModal(){
+  document.getElementById('reqStatusMsg').textContent = 'Generating PDF…';
+  const { sub, items, ledger } = gatherLiveReqAsSub();
+  const html = buildPrfafSheetHtml(sub, items, ledger);
+  const blob = await renderOffscreenAndCapture(html);
+  await shareOrDownloadBlob(blob, buildPrfafFileName(sub));
+  document.getElementById('reqStatusMsg').textContent = '';
+}
+
+// Print/Share/auto-generate for the Review modal (uses the loaded submission)
+async function printReviewPdf(){
+  if(!currentReviewSub) return;
+  const html = buildPrfafSheetHtml(currentReviewSub, currentReviewItems);
+  const blob = await renderOffscreenAndCapture(html);
+  downloadBlob(blob, buildPrfafFileName(currentReviewSub));
+}
+async function shareReviewPdf(){
+  if(!currentReviewSub) return;
+  const html = buildPrfafSheetHtml(currentReviewSub, currentReviewItems);
+  const blob = await renderOffscreenAndCapture(html);
+  await shareOrDownloadBlob(blob, buildPrfafFileName(currentReviewSub));
+}
+
+// Auto-generates the PDF right after approve/disapprove and wires the
+// Save/Share buttons in the modal's pdf-actions row, matching MTCF's
+// presentPdfActions behaviour.
+async function generateAndShowReviewPdf(note){
+  if(!currentReviewSub) return;
+  const html = buildPrfafSheetHtml(currentReviewSub, currentReviewItems);
+  const blob = await renderOffscreenAndCapture(html);
+  const fileName = buildPrfafFileName(currentReviewSub, currentReviewSub.status);
+
+  if(currentReviewPdfUrl) URL.revokeObjectURL(currentReviewPdfUrl);
+  currentReviewPdfUrl = URL.createObjectURL(blob);
+
+  document.getElementById('reviewPdfNote').textContent = note || '';
+  document.getElementById('reviewPdfActions').style.display = 'flex';
+
+  document.getElementById('reviewSavePdfBtn').onclick = () => downloadBlob(blob, fileName);
+  document.getElementById('reviewSharePdfBtn').onclick = () => shareOrDownloadBlob(blob, fileName);
+}
+
+// ---------------------------------------------------------------------
+// LOAD DRAFT MODAL
+// ---------------------------------------------------------------------
+let cachedDraftsForPicker = [];
+async function openLoadDraftModal(){
+  if(!currentUser){ alert('Please sign in first.'); return; }
+  const { data, error } = await sb.from('prfaf_submissions')
+    .select('*, ledger_accounts(name)')
+    .eq('submitted_by', currentUser.id)
+    .eq('status', 'draft')
+    .is('deleted_at', null)
+    .order('created_at', { ascending:false });
+  if(error){ alert('Failed to load drafts: ' + error.message); return; }
+  renderDraftPickerList(data || []);
+  document.getElementById('loadDraftModal').classList.add('show');
+}
+function closeLoadDraftModal(){ document.getElementById('loadDraftModal').classList.remove('show'); }
+
+function renderDraftPickerList(drafts){
+  cachedDraftsForPicker = drafts;
+  const listEl = document.getElementById('draftPickerList');
+  if(!drafts.length){ listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;">No saved drafts yet.</p>'; return; }
+  listEl.innerHTML = drafts.map((d,i) => {
+    const savedAt = d.created_at ? new Date(d.created_at).toLocaleString() : '';
+    return `<div class="draft-pick-item" onclick="selectDraftToLoad(${i})">
+      <strong>${escapeHtml(d.purpose || '(no purpose yet)')}</strong>
+      <div class="meta">${escapeHtml(d.ledger_accounts?.name||'')} · RM ${fmt(d.requested_amount||0)} · started ${savedAt}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectDraftToLoad(index){
+  const draft = cachedDraftsForPicker[index];
+  if(!draft) return;
+  closeLoadDraftModal();
+  openReview(draft.id);
+}
 
 window.addEventListener('load', async () => {
   sb.auth.onAuthStateChange((event, session) => { if(session && !currentUser) bootApp(); });
