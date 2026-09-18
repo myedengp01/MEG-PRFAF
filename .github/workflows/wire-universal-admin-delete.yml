@@ -1,0 +1,39 @@
+name: Wire PRFAF Admin Delete (feature only)
+on:
+  push:
+    branches: [feature/universal-claims-v2026-09-17-1430]
+    paths:
+      - '.github/workflows/wire-universal-admin-delete.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  wire:
+    if: github.ref == 'refs/heads/feature/universal-claims-v2026-09-17-1430'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate module, script and known index baseline
+        run: |
+          node --check src/universal-admin-delete.js
+          node --check scripts/wire-universal-admin-delete.cjs
+          test "$(git hash-object index.html)" = 31813caf55610c7cae0889b1908a54e4e939ca08
+      - name: Wire Admin Delete exactly once
+        run: node scripts/wire-universal-admin-delete.cjs
+      - name: Verify only the intended script was added
+        run: |
+          git diff --check
+          git diff -- index.html | grep -F '+<script src="./src/universal-admin-delete.js"></script>'
+          test "$(git diff --numstat -- index.html)" = "1	0	index.html"
+      - name: Commit index only; do not merge or deploy
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- index.html
+          git commit -m 'feat(prfaf): wire audited Admin Delete on feature branch'
+          git push origin HEAD:feature/universal-claims-v2026-09-17-1430
