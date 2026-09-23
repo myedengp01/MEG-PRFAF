@@ -1,0 +1,44 @@
+name: PRFAF inline payment release 20260922-2000
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/release-inline-payment-20260922-2000.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Wire inline Claim Paid and synchronize UVN
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='v2026.09.20:13:30'; new='v2026.09.22-20:00'
+          assert 'src/universal-admin-delete.js' in s
+          assert 'src/universal-inline-claim-payment.js' not in s
+          s=s.replace(old,new)
+          needle='<script src="./src/universal-admin-delete.js"></script>'
+          replacement=needle+'\n<script src="./src/universal-inline-claim-payment.js?v=20260922-2000"></script>'
+          assert needle in s
+          s=s.replace(needle,replacement,1)
+          assert old not in s
+          assert s.count('universal-inline-claim-payment.js')==1
+          assert s.count('async function confirmDisbursement(id)')==1
+          assert s.count('async function completeReconciliation(id)')==1
+          p.write_text(s,encoding='utf-8')
+          Path('version.json').write_text(json.dumps({'version':new,'uvn':new},indent=2)+'\n',encoding='utf-8')
+          print('PASS: PRFAF inline payment wired; admin delete preserved; UVN synchronized')
+          PY
+          git diff --check
+          git add index.html version.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git diff --cached --quiet || (git commit -m 'release(PRFAF): inline Claim Paid and UVN v2026.09.22-20:00' && git push origin main)
